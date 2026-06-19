@@ -108,12 +108,6 @@ npm run dev   # http://localhost:3000
     └── components/              # Sidebar, Ribbon, Chart, Editor, Feed, Helper, Header
 ```
 
-## Team
-
-- **Yigit & Bakhtier** — framework architecture and tech stack
-- **Asfand** — vendor onboarding flow and demo orchestration
-- **Abdurahmon** — the Live Demo Application
-
 ---
 
 *Built for a hackathon. Designed so the demo never depends on luck.*
