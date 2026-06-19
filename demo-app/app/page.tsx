@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useDashboardStore } from "@/lib/store";
-import { getHelpTooltipTarget, getOverrideClasses, isComponentVisible } from "@/lib/layoutConfig";
+import { LAYOUT_CONFIG, getHelpTooltipTarget, getOverrideClasses, isComponentVisible } from "@/lib/layoutConfig";
 import { Header } from "@/components/Header";
 import { SidebarNavigation } from "@/components/SidebarNavigation";
 import { TopMetricsRibbon } from "@/components/TopMetricsRibbon";
@@ -11,17 +11,22 @@ import { ReportEditorTextarea } from "@/components/ReportEditorTextarea";
 import { NotificationFeed } from "@/components/NotificationFeed";
 import { ExplorationHelper } from "@/components/ExplorationHelper";
 import { cn } from "@/lib/utils";
+import { useBehaviourBridge } from "@/lib/behaviourBridge";
 
 const morphTransition = { duration: 0.25, ease: "easeInOut" as const };
 
 export default function DashboardPage() {
   const currentMode = useDashboardStore((state) => state.currentMode);
+  const importedLayoutConfig = useDashboardStore((state) => state.importedLayoutConfig);
+  const liveSignal = useBehaviourBridge();
 
-  const showSidebar = isComponentVisible("SidebarNavigation", currentMode);
-  const showRibbon = isComponentVisible("TopMetricsRibbon", currentMode);
-  const showChart = isComponentVisible("MainDataChart", currentMode);
-  const showFeed = isComponentVisible("NotificationFeed", currentMode);
-  const showHelper = getHelpTooltipTarget(currentMode) === "ReportEditorTextarea";
+  const activeConfig = importedLayoutConfig ?? LAYOUT_CONFIG;
+
+  const showSidebar = isComponentVisible("SidebarNavigation", currentMode, activeConfig);
+  const showRibbon = isComponentVisible("TopMetricsRibbon", currentMode, activeConfig);
+  const showChart = isComponentVisible("MainDataChart", currentMode, activeConfig);
+  const showFeed = isComponentVisible("NotificationFeed", currentMode, activeConfig);
+  const showHelper = getHelpTooltipTarget(currentMode, activeConfig) === "ReportEditorTextarea";
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -36,13 +41,13 @@ export default function DashboardPage() {
             transition={morphTransition}
             className="overflow-hidden"
           >
-            <SidebarNavigation className={getOverrideClasses("SidebarNavigation", currentMode)} />
+            <SidebarNavigation className={getOverrideClasses("SidebarNavigation", currentMode, activeConfig)} />
           </motion.div>
         )}
       </AnimatePresence>
 
       <motion.div layout transition={morphTransition} className="flex flex-1 flex-col">
-        <Header />
+        <Header liveSignal={liveSignal} />
 
         <main className="flex flex-1 flex-col gap-6 p-6">
           <AnimatePresence initial={false}>
@@ -55,7 +60,7 @@ export default function DashboardPage() {
                 exit={{ opacity: 0, height: 0 }}
                 transition={morphTransition}
               >
-                <TopMetricsRibbon className={getOverrideClasses("TopMetricsRibbon", currentMode)} />
+                <TopMetricsRibbon className={getOverrideClasses("TopMetricsRibbon", currentMode, activeConfig)} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -82,7 +87,7 @@ export default function DashboardPage() {
               transition={morphTransition}
               className={cn("relative flex flex-1", currentMode === "Focus" ? "lg:flex-[1]" : "lg:flex-[2]")}
             >
-              <ReportEditorTextarea className={getOverrideClasses("ReportEditorTextarea", currentMode)} />
+              <ReportEditorTextarea className={getOverrideClasses("ReportEditorTextarea", currentMode, activeConfig)} />
               <AnimatePresence>{showHelper && <ExplorationHelper />}</AnimatePresence>
             </motion.div>
 

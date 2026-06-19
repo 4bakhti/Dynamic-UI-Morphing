@@ -9,13 +9,15 @@ export type DashboardMode = "Normal" | "Focus" | "Exploration" | "Clarity";
 
 export const DASHBOARD_MODES: DashboardMode[] = ["Normal", "Focus", "Exploration", "Clarity"];
 
-interface ModeLayout {
+export interface ModeLayout {
   visibleComponents: ComponentName[];
   hiddenComponents: ComponentName[];
   cssOverrides: Partial<Record<ComponentName, string>>;
   aiAssistance: boolean;
   helpTooltipTarget?: ComponentName;
 }
+
+export type FullLayoutConfig = Record<DashboardMode, ModeLayout>;
 
 const ALL_COMPONENTS: ComponentName[] = [
   "SidebarNavigation",
@@ -31,7 +33,7 @@ const ALL_COMPONENTS: ComponentName[] = [
  * live demo and the vendor-portal preview never disagree about a mode's
  * shape. "Normal" has no analog there since it is simply "nothing hidden."
  */
-export const LAYOUT_CONFIG: Record<DashboardMode, ModeLayout> = {
+export const LAYOUT_CONFIG: FullLayoutConfig = {
   Normal: {
     visibleComponents: ALL_COMPONENTS,
     hiddenComponents: [],
@@ -70,14 +72,89 @@ export const LAYOUT_CONFIG: Record<DashboardMode, ModeLayout> = {
   },
 };
 
-export function isComponentVisible(component: ComponentName, mode: DashboardMode): boolean {
-  return LAYOUT_CONFIG[mode].visibleComponents.includes(component);
+export function isComponentVisible(
+  component: ComponentName,
+  mode: DashboardMode,
+  config: FullLayoutConfig = LAYOUT_CONFIG,
+): boolean {
+  return config[mode].visibleComponents.includes(component);
 }
 
-export function getOverrideClasses(component: ComponentName, mode: DashboardMode): string {
-  return LAYOUT_CONFIG[mode].cssOverrides[component] ?? "";
+export function getOverrideClasses(
+  component: ComponentName,
+  mode: DashboardMode,
+  config: FullLayoutConfig = LAYOUT_CONFIG,
+): string {
+  return config[mode].cssOverrides[component] ?? "";
 }
 
-export function getHelpTooltipTarget(mode: DashboardMode): ComponentName | null {
-  return LAYOUT_CONFIG[mode].helpTooltipTarget ?? null;
+export function getHelpTooltipTarget(
+  mode: DashboardMode,
+  config: FullLayoutConfig = LAYOUT_CONFIG,
+): ComponentName | null {
+  return config[mode].helpTooltipTarget ?? null;
+}
+
+const KNOWN_COMPONENTS = new Set<string>(ALL_COMPONENTS);
+
+function isComponentName(value: unknown): value is ComponentName {
+  return typeof value === "string" && KNOWN_COMPONENTS.has(value);
+}
+
+function parseModeLayout(value: unknown, path: string): ModeLayout {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`${path} must be an object`);
+  }
+
+  const raw = value as Record<string, unknown>;
+
+  const visibleComponents = Array.isArray(raw.visibleComponents)
+    ? raw.visibleComponents.filter(isComponentName)
+    : [];
+  const hiddenComponents = Array.isArray(raw.hiddenComponents)
+    ? raw.hiddenComponents.filter(isComponentName)
+    : [];
+
+  const cssOverrides: Partial<Record<ComponentName, string>> = {};
+  if (typeof raw.cssOverrides === "object" && raw.cssOverrides !== null) {
+    for (const [key, classes] of Object.entries(raw.cssOverrides as Record<string, unknown>)) {
+      if (isComponentName(key) && typeof classes === "string") {
+        cssOverrides[key] = classes;
+      }
+    }
+  }
+
+  const helpTooltipTarget = isComponentName(raw.helpTooltipTarget) ? raw.helpTooltipTarget : undefined;
+
+  return {
+    visibleComponents,
+    hiddenComponents,
+    cssOverrides,
+    aiAssistance: raw.aiAssistance === true,
+    helpTooltipTarget,
+  };
+}
+
+/**
+ * Parses the exact JSON the Developing Agent's UI lets you copy (the
+ * FocusMode/ExplorationMode/ClarityMode shape from
+ * vendor-portal/lib/schema.ts's layoutSchema) into this app's layout config,
+ * keeping "Normal" as the unaffected "everything visible" baseline.
+ */
+export function parseImportedLayoutConfig(json: unknown): FullLayoutConfig {
+  if (typeof json !== "object" || json === null) {
+    throw new Error("Expected a JSON object with FocusMode, ExplorationMode, and ClarityMode.");
+  }
+
+  const raw = json as Record<string, unknown>;
+  if (!("FocusMode" in raw) || !("ExplorationMode" in raw) || !("ClarityMode" in raw)) {
+    throw new Error("JSON must include FocusMode, ExplorationMode, and ClarityMode keys.");
+  }
+
+  return {
+    Normal: LAYOUT_CONFIG.Normal,
+    Focus: parseModeLayout(raw.FocusMode, "FocusMode"),
+    Exploration: parseModeLayout(raw.ExplorationMode, "ExplorationMode"),
+    Clarity: parseModeLayout(raw.ClarityMode, "ClarityMode"),
+  };
 }
