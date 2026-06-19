@@ -98,7 +98,7 @@ export const DEMO_OUTPUT: LayoutConfig = {
     helpTooltipTarget: "ReportEditorTextarea",
   },
   ClarityMode: {
-    visibleComponents: ["SidebarNavigation", "ReportEditorTextarea"],
+    visibleComponents: ["SidebarNavigation", "TopMetricsRibbon", "ReportEditorTextarea"],
     hiddenComponents: ["NotificationFeed", "MainDataChart"],
     cssOverrides: {
       SidebarNavigation: "text-xl font-bold p-8",
