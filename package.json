@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "typescript": "^6.0.3",
+    "zustand": "^5.0.14"
+  }
+}
