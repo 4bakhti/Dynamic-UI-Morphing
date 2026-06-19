@@ -1,23 +1,119 @@
 # Dynamic UI Morphing Framework
 
-The framework has two pieces: a **Behaviour Agent** that scores live user telemetry into a UI "mode," and a **Vendor Portal** that uses an LLM to generate the layouts the Behaviour Agent switches between.
+**Interfaces that adapt to how a person is actually doing — not just what they clicked.**
 
-## Behaviour Agent
+A B2B framework that watches *how* users move through software (never *what* they type or read) and reshapes the interface in real time: stripping away noise when they're focused, surfacing help when they're stuck, and simplifying everything when they're frustrated. A human-controlled lock switch always wins over the algorithm.
 
-The Behaviour Agent is a privacy-first browser telemetry engine for adaptive interfaces. It deliberately observes only numeric interaction metadata: event timing, frequencies, intervals, mouse coordinates, position deltas, scroll direction, counts, and bounding boxes. It never reads keystroke content, form values, clipboard contents, DOM text, screenshots, selectors, labels, or semantic page data, which keeps the scoring pipeline free of personal content by construction.
+<p>
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-000000?style=flat&logo=next.js&logoColor=white">
+  <img alt="Zustand" src="https://img.shields.io/badge/State-Zustand-7c3aed?style=flat">
+  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat&logo=tailwindcss&logoColor=white">
+  <img alt="Framer Motion" src="https://img.shields.io/badge/Framer_Motion-0055FF?style=flat&logo=framer&logoColor=white">
+  <img alt="OpenAI" src="https://img.shields.io/badge/LLM-gpt--4o--mini-412991?style=flat&logo=openai&logoColor=white">
+  <img alt="Privacy" src="https://img.shields.io/badge/Telemetry-numeric--only-22c55e?style=flat">
+</p>
 
-Signals flow through small pluggable collectors under `src/behaviour/signals`. Action arrival slowing tracks click/keydown intervals, cursor dwell measures mouseenter-to-click duration on the same numeric region, scroll reversal tracks wheel direction changes, and error/abandonment counts invalid and incomplete-exit events. Each signal feeds an in-memory per-user baseline with a 500-sample history and emits z-scores only after 30 samples, preventing cold-start noise from driving UI changes.
+---
 
-The cognitive-load score is computed every 30 seconds as a weighted average of active z-scores: `S_comp = sum(z_i * w_i) / sum(w_i)`, clamped to `[-3, +3]`. Missing z-scores are excluded rather than treated as normal, and all math guards against `NaN`, `Infinity`, and zero standard deviation. Network latency above 500ms and active text selection pause scoring so external system conditions and intentional selection behavior are not mistaken for cognitive load.
+## The pitch
 
-The UI morphing state machine maps scores to `standard`, `clarity`, `focus`, and `exploration` modes through configurable thresholds. Composite transitions are validated with cooldown, hysteresis, and a two-signal rule so a single outlier cannot morph the UI. Explicit overrides such as help-panel opens, task abandonment, and repeated numeric validation errors bypass those safeguards and dispatch immediately through the same Zustand store that the Next.js frontend reads.
+Most "smart" UIs react to clicks. This one reacts to *cognitive load* — measured from timing, dwell, scroll reversals, and error rates, never from content. Three pieces work together to make that real instead of theoretical:
 
-Restrictive modes (`clarity`, `focus`) use hysteresis only when *exiting* back to `standard`/`exploration`, so a composite score climbing from `clarity` straight into `focus`-range (or dropping back) is still gated by the cooldown and two-signal rule, not blocked outright by the exit hysteresis.
+```
+1 · DESCRIBE                    2 · WATCH & SCORE               3 · MORPH                   
++--------------------------+    +--------------------------+    +--------------------------+
+| Vendor Portal            |    | Behaviour Agent          |    | Live Demo App            |
+| vendor-portal/           |--> | src/behaviour/           |--> | demo-app/                |
+|                          |    |                          |    |                          |
+| An LLM turns a           |    | Numeric-only telemetry   |    | Sidebar, Ribbon, Chart,  |
+| plain-text component     |    | to per-signal z-scores   |    | Editor, Notifications    |
+| list into layout JSON    |    | to composite score to    |    | all read from one mode   |
+| for Focus / Exploration  |    | state machine, guarded   |    | in Zustand and morph     |
+| / Clarity modes          |    | by cooldown + hysteresis |    | live with Framer Motion  |
++--------------------------+    +--------------------------+    +--------------------------+
+```
 
-## Vendor Portal (Developing Agent)
+## The four modes
 
-[`vendor-portal/`](vendor-portal/) is a separate Next.js app where a vendor describes their app's components in plain text, and an LLM (`gpt-4o-mini` via the Vercel AI SDK) generates a strict, Zod-validated JSON config defining the `FocusMode`, `ExplorationMode`, and `ClarityMode` layouts that the Behaviour Agent switches between at runtime.
+| Mode | Trigger | What changes |
+|---|---|---|
+| **Normal** | Default state | Everything visible: sidebar, metrics, chart, editor, notifications |
+| **Focus** | Attention drops / high mouse velocity | Every peripheral panel hides; the report editor expands into a centered, minimalist writing canvas |
+| **Exploration** | User looks stuck or idle | Charts and notifications hide; sidebar + editor stay; a gentle AI helper tooltip fades in on the component they're stuck on |
+| **Clarity** | Fatigue, rage-clicks, repeated errors | Dense feeds and multi-series charts hide; click targets enlarge; text gets bolder and bigger; navigation simplifies |
 
-`POST /api/generate-layout` either streams a live model response or, when `DEMO_MODE=true`, replays a deterministic pre-compiled JSON for reliable on-stage demos. See [`vendor-portal/README.md`](vendor-portal/README.md) for setup and the demo-mode flag.
+Every mode transition is debounced — a single noisy signal can't morph the UI. And no matter what the algorithm decides, a **"Lock Interface" toggle** gives the human the last word: while locked, background mode-change signals are silently ignored.
 
-**Note:** `vendor-portal/.env.local` holds a real `OPENAI_API_KEY` and is git-ignored at both the repo root and within `vendor-portal/` — never commit it. Use `vendor-portal/.env.local.example` as the template.
+## Privacy by construction
+
+The Behaviour Agent only ever touches numbers:
+
+- **Observed:** event timing, intervals, frequencies, mouse coordinates, position deltas, scroll direction, counts, bounding boxes
+- **Never observed:** keystroke content, form values, clipboard data, DOM text, screenshots, selectors, labels, semantic page content
+
+This isn't a policy promise enforced by review — the collectors in [`src/behaviour/signals/`](src/behaviour/signals/) are physically incapable of reading anything else; there's no code path that touches text content at all.
+
+## The three pieces
+
+### Behaviour Agent — [`src/behaviour/`](src/behaviour/)
+
+A privacy-first browser telemetry engine. Four pluggable signal collectors (action-arrival slowing, cursor dwell, scroll reversal, error/abandonment) feed an in-memory per-user baseline (500-sample history, z-scores withheld until 30 samples to avoid cold-start noise). Every 30 seconds those z-scores combine into a composite score, `S_comp = Σ(zᵢ·wᵢ) / Σwᵢ`, clamped to `[-3, +3]`. A state machine maps that score to a mode through configurable thresholds, gated by cooldown, hysteresis, and a two-signal rule — while explicit overrides (help panel opened, task abandoned, repeated validation errors) bypass those guards and dispatch immediately. Everything is exposed through a single Zustand store the frontend reads directly.
+
+### Vendor Portal (Developing Agent) — [`vendor-portal/`](vendor-portal/)
+
+A Next.js onboarding surface where a vendor pastes a plain-text description of their app's components. An LLM (`gpt-4o-mini` via the Vercel AI SDK's `streamObject`) generates a strict, Zod-validated JSON config defining the `FocusMode`, `ExplorationMode`, and `ClarityMode` layouts — the schema makes it physically impossible for the model to emit something that breaks the consuming frontend. A `DEMO_MODE` flag swaps the live call for a deterministic pre-compiled response, so on-stage demos never depend on model variance or network conditions. See [`vendor-portal/README.md`](vendor-portal/README.md).
+
+### Live Demo App — [`demo-app/`](demo-app/)
+
+The "Enterprise Data Analytics Dashboard" judges actually see: a single-page Next.js app with a sidebar, a metrics ribbon, a data chart, a report editor, and a notification feed, all driven by one `currentMode` value in a Zustand store. Framer Motion animates every panel hiding, expanding, or reflowing as the mode changes. The layout rules for each mode live in one file — [`lib/layoutConfig.ts`](demo-app/lib/layoutConfig.ts) — mirroring the exact contract the Developing Agent emits, so the two apps can never disagree about what a mode looks like. The header's "Simulate Signal" pills stand in for the real Behaviour Agent during a demo; the **Lock Interface** switch next to them proves the human-in-the-loop safeguard live.
+
+## Getting started
+
+```bash
+# Behaviour Agent — library, no dev server
+npm install
+
+# Vendor Portal (Developing Agent) — needs an OpenAI key, or DEMO_MODE=true
+cd vendor-portal
+npm install
+cp .env.local.example .env.local   # fill in OPENAI_API_KEY, or set DEMO_MODE=true
+npm run dev   # http://localhost:3000
+
+# Live Demo App — fully self-contained, no env vars needed
+cd demo-app
+npm install
+npm run dev   # http://localhost:3000
+```
+
+## Project structure
+
+```
+.
+├── src/behaviour/        # Behaviour Agent: signals → baselines → z-scores → state machine
+│   ├── signals/           # Pluggable numeric-only collectors
+│   ├── baseline/          # Per-signal running mean/stddev
+│   ├── scoring/            # Z-score + composite scoring
+│   ├── stateMachine/        # Mode transitions: cooldown, hysteresis, two-signal rule
+│   ├── overrides/            # Explicit bypass triggers (help panel, abandonment, errors)
+│   └── store/                  # The Zustand store the frontend reads
+│
+├── vendor-portal/        # Developing Agent: LLM → layout JSON for vendors
+│   ├── app/api/generate-layout/  # streamObject route (live or DEMO_MODE)
+│   └── lib/schema.ts               # The Zod contract + canned demo output
+│
+└── demo-app/              # Live Demo: the dashboard judges see, morphing in real time
+    ├── lib/layoutConfig.ts  # Single source of truth for visibility/overrides per mode
+    ├── lib/store.ts            # currentMode + isInterfaceLocked
+    └── components/              # Sidebar, Ribbon, Chart, Editor, Feed, Helper, Header
+```
+
+## Team
+
+- **Yigit & Bakhtier** — framework architecture and tech stack
+- **Asfand** — vendor onboarding flow and demo orchestration
+- **Abdurahmon** — the Live Demo Application
+
+---
+
+*Built for a hackathon. Designed so the demo never depends on luck.*
