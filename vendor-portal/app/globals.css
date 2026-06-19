@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-ink-950 text-slate-200 antialiased;
+  background-image:
+    radial-gradient(60rem 40rem at 80% -10%, rgba(56, 189, 248, 0.12), transparent),
+    radial-gradient(50rem 35rem at -10% 110%, rgba(99, 102, 241, 0.1), transparent);
+  background-attachment: fixed;
+}
+
+/* Subtle grid texture behind the whole app. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+  background-size: 38px 38px;
+}
+
+/* JSON syntax highlight tokens. */
+.tok-key {
+  @apply text-sky-300;
+}
+.tok-string {
+  @apply text-emerald-300;
+}
+.tok-bool {
+  @apply text-fuchsia-300;
+}
+.tok-num {
+  @apply text-amber-300;
+}
+.tok-punc {
+  @apply text-slate-500;
+}
+
+/* Thin scrollbar for the terminal pane. */
+.thin-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  @apply bg-ink-700 rounded-full;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}

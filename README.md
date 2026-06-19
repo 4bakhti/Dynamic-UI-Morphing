@@ -1,5 +1,7 @@
 # Dynamic UI Morphing Framework
 
+The framework has two pieces: a **Behaviour Agent** that scores live user telemetry into a UI "mode," and a **Vendor Portal** that uses an LLM to generate the layouts the Behaviour Agent switches between.
+
 ## Behaviour Agent
 
 The Behaviour Agent is a privacy-first browser telemetry engine for adaptive interfaces. It deliberately observes only numeric interaction metadata: event timing, frequencies, intervals, mouse coordinates, position deltas, scroll direction, counts, and bounding boxes. It never reads keystroke content, form values, clipboard contents, DOM text, screenshots, selectors, labels, or semantic page data, which keeps the scoring pipeline free of personal content by construction.
@@ -9,3 +11,13 @@ Signals flow through small pluggable collectors under `src/behaviour/signals`. A
 The cognitive-load score is computed every 30 seconds as a weighted average of active z-scores: `S_comp = sum(z_i * w_i) / sum(w_i)`, clamped to `[-3, +3]`. Missing z-scores are excluded rather than treated as normal, and all math guards against `NaN`, `Infinity`, and zero standard deviation. Network latency above 500ms and active text selection pause scoring so external system conditions and intentional selection behavior are not mistaken for cognitive load.
 
 The UI morphing state machine maps scores to `standard`, `clarity`, `focus`, and `exploration` modes through configurable thresholds. Composite transitions are validated with cooldown, hysteresis, and a two-signal rule so a single outlier cannot morph the UI. Explicit overrides such as help-panel opens, task abandonment, and repeated numeric validation errors bypass those safeguards and dispatch immediately through the same Zustand store that the Next.js frontend reads.
+
+Restrictive modes (`clarity`, `focus`) use hysteresis only when *exiting* back to `standard`/`exploration`, so a composite score climbing from `clarity` straight into `focus`-range (or dropping back) is still gated by the cooldown and two-signal rule, not blocked outright by the exit hysteresis.
+
+## Vendor Portal (Developing Agent)
+
+[`vendor-portal/`](vendor-portal/) is a separate Next.js app where a vendor describes their app's components in plain text, and an LLM (`gpt-4o-mini` via the Vercel AI SDK) generates a strict, Zod-validated JSON config defining the `FocusMode`, `ExplorationMode`, and `ClarityMode` layouts that the Behaviour Agent switches between at runtime.
+
+`POST /api/generate-layout` either streams a live model response or, when `DEMO_MODE=true`, replays a deterministic pre-compiled JSON for reliable on-stage demos. See [`vendor-portal/README.md`](vendor-portal/README.md) for setup and the demo-mode flag.
+
+**Note:** `vendor-portal/.env.local` holds a real `OPENAI_API_KEY` and is git-ignored at both the repo root and within `vendor-portal/` — never commit it. Use `vendor-portal/.env.local.example` as the template.

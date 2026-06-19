@@ -109,6 +109,16 @@ export class BehaviourStateMachine {
     }
 
     /*
+     * Moving between the two restrictive modes (clarity <-> focus) is not an
+     * "exit" of the restrictive band, so hysteresis does not apply; only the
+     * cooldown and two-signal checks in applyComposite gate this transition.
+     */
+    if (this.isRestrictiveMode(desiredMode)) {
+      this.belowStandardStartedAt = null;
+      return true;
+    }
+
+    /*
      * Hysteresis prevents focus/clarity from flickering away on a single calmer
      * scoring tick. Once in a restrictive mode, any exit requires the score to
      * stay below the return threshold continuously for the configured duration.
