@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Developing Agent · Vendor Portal",
+  title: "Code Refactoring Engine · Vendor Portal",
   description:
-    "Onboard your application into the Adaptive UI framework. Generate cognitive-state layout configurations from your component structure.",
+    "Onboard your application into the Adaptive UI framework. The Developing Agent refactors your React components to morph across cognitive states.",
 };
 
 export default function RootLayout({
