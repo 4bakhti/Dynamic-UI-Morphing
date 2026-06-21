@@ -10,6 +10,7 @@ import { MainDataChart } from "@/components/MainDataChart";
 import { ReportEditorTextarea } from "@/components/ReportEditorTextarea";
 import { NotificationFeed } from "@/components/NotificationFeed";
 import { ExplorationHelper } from "@/components/ExplorationHelper";
+import { ScrollableAnalyticsContent } from "@/components/ScrollableAnalyticsContent";
 import { cn } from "@/lib/utils";
 import { useBehaviourBridge } from "@/lib/behaviourBridge";
 
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const showChart = isComponentVisible("MainDataChart", currentMode, activeConfig);
   const showFeed = isComponentVisible("NotificationFeed", currentMode, activeConfig);
   const showHelper = getHelpTooltipTarget(currentMode, activeConfig) === "ReportEditorTextarea";
+  const isExplorationMode = currentMode === "Exploration";
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -77,7 +79,9 @@ export default function DashboardPage() {
                   transition={morphTransition}
                   className="lg:flex-[2]"
                 >
-                  <MainDataChart />
+                  <MainDataChart
+                    className={getOverrideClasses("MainDataChart", currentMode, activeConfig)}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -102,11 +106,15 @@ export default function DashboardPage() {
                   transition={morphTransition}
                   className="lg:flex-[1]"
                 >
-                  <NotificationFeed />
+                  <NotificationFeed
+                    className={getOverrideClasses("NotificationFeed", currentMode, activeConfig)}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
+
+          <ScrollableAnalyticsContent dimmed={isExplorationMode} />
         </main>
       </motion.div>
     </div>

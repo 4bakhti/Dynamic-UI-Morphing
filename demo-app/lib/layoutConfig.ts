@@ -49,10 +49,15 @@ export const LAYOUT_CONFIG: FullLayoutConfig = {
     aiAssistance: false,
   },
   Exploration: {
-    visibleComponents: ["SidebarNavigation", "ReportEditorTextarea"],
-    hiddenComponents: ["TopMetricsRibbon", "MainDataChart", "NotificationFeed"],
+    visibleComponents: ALL_COMPONENTS,
+    hiddenComponents: [],
     cssOverrides: {
-      ReportEditorTextarea: "opacity-75",
+      SidebarNavigation: "opacity-40 transition-opacity duration-300",
+      TopMetricsRibbon: "opacity-40 transition-opacity duration-300",
+      MainDataChart: "opacity-30 transition-opacity duration-300",
+      NotificationFeed: "opacity-30 transition-opacity duration-300",
+      ReportEditorTextarea:
+        "relative z-10 opacity-100 ring-2 ring-emerald-300/80 shadow-xl shadow-emerald-100 transition-all duration-300",
     },
     aiAssistance: true,
     helpTooltipTarget: "ReportEditorTextarea",

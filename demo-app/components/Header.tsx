@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, FileJson, Lock, LockOpen, Radio, RotateCcw } from "lucide-react";
+import { Activity, Lock, LockOpen, Radio, RotateCcw } from "lucide-react";
 import { useDashboardStore } from "@/lib/store";
 import { DASHBOARD_MODES, type DashboardMode } from "@/lib/layoutConfig";
 import type { LiveSignalState } from "@/lib/behaviourBridge";
 import { ModeBadge } from "./ui/Badge";
 import { Switch } from "./ui/Switch";
-import { Button } from "./ui/Button";
 import { cn } from "@/lib/utils";
 
 const IGNORED_BANNER_MS = 2600;
@@ -23,7 +22,6 @@ export function Header({ liveSignal }: { liveSignal: LiveSignalState }) {
   const resetLayoutConfig = useDashboardStore((state) => state.resetLayoutConfig);
 
   const [showIgnoredBanner, setShowIgnoredBanner] = useState(false);
-  const [showImportPanel, setShowImportPanel] = useState(false);
 
   useEffect(() => {
     if (!lastIgnoredAttempt) {
@@ -63,7 +61,7 @@ export function Header({ liveSignal }: { liveSignal: LiveSignalState }) {
             ))}
           </div>
 
-          {importedLayoutConfig ? (
+          {importedLayoutConfig && (
             <button
               onClick={resetLayoutConfig}
               title="Using a layout imported from the Developing Agent — click to reset to default"
@@ -72,11 +70,6 @@ export function Header({ liveSignal }: { liveSignal: LiveSignalState }) {
               <RotateCcw className="h-3 w-3" />
               Custom layout active
             </button>
-          ) : (
-            <Button variant="ghost" className="text-xs" onClick={() => setShowImportPanel((open) => !open)}>
-              <FileJson className="h-3.5 w-3.5" />
-              Import Layout JSON
-            </Button>
           )}
 
           <div className="flex items-center gap-2">
@@ -98,48 +91,7 @@ export function Header({ liveSignal }: { liveSignal: LiveSignalState }) {
         </p>
       )}
 
-      {showImportPanel && <ImportLayoutPanel onClose={() => setShowImportPanel(false)} />}
     </header>
-  );
-}
-
-function ImportLayoutPanel({ onClose }: { onClose: () => void }) {
-  const importLayoutConfig = useDashboardStore((state) => state.importLayoutConfig);
-  const layoutImportError = useDashboardStore((state) => state.layoutImportError);
-  const [draft, setDraft] = useState("");
-
-  const handleApply = () => {
-    importLayoutConfig(draft);
-    if (useDashboardStore.getState().importedLayoutConfig) {
-      onClose();
-    }
-  };
-
-  return (
-    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-xs text-slate-500">
-        Paste the JSON copied from the Developing Agent (vendor-portal) — the same{" "}
-        <code className="rounded bg-slate-200 px-1 py-0.5 text-[11px]">FocusMode</code> /{" "}
-        <code className="rounded bg-slate-200 px-1 py-0.5 text-[11px]">ExplorationMode</code> /{" "}
-        <code className="rounded bg-slate-200 px-1 py-0.5 text-[11px]">ClarityMode</code> shape it generates.
-      </p>
-      <textarea
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        spellCheck={false}
-        placeholder='{"FocusMode": {...}, "ExplorationMode": {...}, "ClarityMode": {...}}'
-        className="mt-2 h-32 w-full resize-none rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs text-slate-800 outline-none focus:border-brand/60"
-      />
-      {layoutImportError && <p className="mt-1 text-xs font-medium text-rose-600">{layoutImportError}</p>}
-      <div className="mt-3 flex items-center gap-2">
-        <Button variant="primary" className="text-xs" onClick={handleApply} disabled={!draft.trim()}>
-          Apply layout
-        </Button>
-        <Button variant="secondary" className="text-xs" onClick={onClose}>
-          Cancel
-        </Button>
-      </div>
-    </div>
   );
 }
 
