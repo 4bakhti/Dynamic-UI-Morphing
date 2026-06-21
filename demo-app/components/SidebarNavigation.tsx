@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { BarChart2, FileText, Home, Settings, Users, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, type NavItem } from "@/lib/mock-data";
@@ -13,6 +14,8 @@ const ICONS: Record<NavItem["icon"], LucideIcon> = {
 };
 
 export function SidebarNavigation({ className }: { className?: string }) {
+  const [activeItem, setActiveItem] = useState(NAV_ITEMS[0].label);
+
   return (
     <nav
       className={cn(
@@ -27,14 +30,20 @@ export function SidebarNavigation({ className }: { className?: string }) {
         <span className="text-sm font-semibold text-slate-900">Aurora Analytics</span>
       </div>
 
-      {NAV_ITEMS.map((item, index) => {
+      {NAV_ITEMS.map((item) => {
         const Icon = ICONS[item.icon];
+        const isActive = item.label === activeItem;
+
         return (
           <button
             key={item.label}
+            type="button"
+            onClick={() => setActiveItem(item.label)}
+            aria-current={isActive ? "page" : undefined}
+            data-telemetry-action={`navigate-${item.label.toLowerCase()}`}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
-              index === 0
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
+              isActive
                 ? "bg-brand-soft text-brand"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
             )}
