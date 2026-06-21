@@ -44,7 +44,7 @@ export const LAYOUT_CONFIG: FullLayoutConfig = {
     visibleComponents: ["ReportEditorTextarea"],
     hiddenComponents: ["SidebarNavigation", "TopMetricsRibbon", "MainDataChart", "NotificationFeed"],
     cssOverrides: {
-      ReportEditorTextarea: "w-full max-w-4xl mx-auto shadow-none",
+      ReportEditorTextarea: "mx-auto min-h-screen w-full max-w-5xl shadow-none",
     },
     aiAssistance: false,
   },
