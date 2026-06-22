@@ -50,7 +50,7 @@ Every mode transition is debounced — a single noisy signal can't morph the UI.
 The Behaviour Agent only ever touches numbers:
 
 - **Observed:** event timing, intervals, frequencies, mouse coordinates, position deltas, scroll direction, counts, bounding boxes
-- **Never observed:** keystroke content, form values, clipboard data, DOM text, screenshots, selectors, labels, semantic page content
+- **Never observed:** keystroke content, form values, clipboard data, DOM text, screenshots, selectors, labels, semantic page content.
 
 This isn't a policy promise enforced by review — the collectors in [`src/behaviour/signals/`](src/behaviour/signals/) are physically incapable of reading anything else; there's no code path that touches text content at all.
 
