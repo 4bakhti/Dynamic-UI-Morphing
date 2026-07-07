@@ -37,7 +37,3 @@ Thumbs.db
 tmp/
 temp/
 .cache/
-
-docs/
-behaviour-agent-spec.md
-CHANGELOG.md

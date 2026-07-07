@@ -62,17 +62,19 @@ A privacy-first browser telemetry engine. Four pluggable signal collectors (acti
 
 ### Vendor Portal (Developing Agent) — [`vendor-portal/`](vendor-portal/)
 
-A Next.js onboarding surface where a vendor pastes a plain-text description of their app's components. An LLM (`gpt-4o-mini` via the Vercel AI SDK's `streamObject`) generates a strict, Zod-validated JSON config defining the `FocusMode`, `ExplorationMode`, and `ClarityMode` layouts — the schema makes it physically impossible for the model to emit something that breaks the consuming frontend. A `DEMO_MODE` flag swaps the live call for a deterministic pre-compiled response, so on-stage demos never depend on model variance or network conditions. See [`vendor-portal/README.md`](vendor-portal/README.md).
+A Next.js onboarding surface with two agent modes. **Layout JSON**: a vendor pastes a plain-text description of their app's components and an LLM (`gpt-4o-mini` via the Vercel AI SDK's `streamObject`) generates a strict, Zod-validated JSON config defining the `FocusMode`, `ExplorationMode`, and `ClarityMode` layouts — the schema constrains every component name and field, so the model structurally cannot emit a config the consuming frontend fails to parse. **Refactor Code**: the agent ingests the vendor's raw component source and rewrites it in place with mode-aware conditional rendering (via `streamText`). Both routes share hardened request guards — input size caps, per-IP rate limiting on the paid path, capped output tokens, and untrusted-data delimiters against prompt injection. A `DEMO_MODE` flag swaps the live calls for deterministic pre-compiled responses, so on-stage demos never depend on model variance or network conditions. See [`vendor-portal/README.md`](vendor-portal/README.md).
 
 ### Live Demo App — [`demo-app/`](demo-app/)
 
-The "Enterprise Data Analytics Dashboard" judges actually see: a single-page Next.js app with a sidebar, a metrics ribbon, a data chart, a report editor, and a notification feed, all driven by one `currentMode` value in a Zustand store. Framer Motion animates every panel hiding, expanding, or reflowing as the mode changes. The layout rules for each mode live in one file — [`lib/layoutConfig.ts`](demo-app/lib/layoutConfig.ts) — mirroring the exact contract the Developing Agent emits, so the two apps can never disagree about what a mode looks like. The header's "Simulate Signal" pills stand in for the real Behaviour Agent during a demo; the **Lock Interface** switch next to them proves the human-in-the-loop safeguard live.
+The "Enterprise Data Analytics Dashboard" judges actually see: a single-page Next.js app with a sidebar, a metrics ribbon, a data chart, a report editor, and a notification feed, all driven by one `currentMode` value in a Zustand store. Framer Motion animates every panel hiding, expanding, or reflowing as the mode changes. The layout rules for each mode live in one file — [`lib/layoutConfig.ts`](demo-app/lib/layoutConfig.ts) — mirroring the exact contract the Developing Agent emits, so the two apps can never disagree about what a mode looks like. The header's **Import layout** panel closes the loop: paste the JSON the Vendor Portal generated and the dashboard morphs using that vendor's config instead of the built-in one. The "Simulate Signal" pills stand in for the real Behaviour Agent during a demo; the **Lock Interface** switch next to them proves the human-in-the-loop safeguard live.
 
 ## Getting started
 
 ```bash
 # Behaviour Agent — library, no dev server
 npm install
+npm test        # vitest suite: scoring, baselines, state-machine guards
+npm run typecheck
 
 # Vendor Portal (Developing Agent) — needs an OpenAI key, or DEMO_MODE=true
 cd vendor-portal
@@ -98,13 +100,16 @@ npm run dev   # http://localhost:3000
 │   ├── overrides/            # Explicit bypass triggers (help panel, abandonment, errors)
 │   └── store/                  # The Zustand store the frontend reads
 │
-├── vendor-portal/        # Developing Agent: LLM → layout JSON for vendors
-│   ├── app/api/generate-layout/  # streamObject route (live or DEMO_MODE)
-│   └── lib/schema.ts               # The Zod contract + canned demo output
+├── vendor-portal/        # Developing Agent: LLM → refactored code or layout JSON
+│   ├── app/api/generate-layout/  # streamObject route: Zod-validated layout JSON
+│   ├── app/api/refactor-ui/       # streamText route: mode-aware code rewrite
+│   ├── lib/schema.ts               # The Zod contract + canned demo output
+│   ├── lib/refactor.ts              # Refactor prompts + canned demo refactor
+│   └── lib/apiGuards.ts              # Size caps, rate limiting, shared route guards
 │
 └── demo-app/              # Live Demo: the dashboard judges see, morphing in real time
     ├── lib/layoutConfig.ts  # Single source of truth for visibility/overrides per mode
-    ├── lib/store.ts            # currentMode + isInterfaceLocked
+    ├── lib/store.ts            # currentMode + isInterfaceLocked + imported layouts
     └── components/              # Sidebar, Ribbon, Chart, Editor, Feed, Helper, Header
 ```
 
