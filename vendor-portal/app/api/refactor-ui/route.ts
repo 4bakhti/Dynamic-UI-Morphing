@@ -5,9 +5,23 @@ import {
   buildRefactorPrompt,
   DEMO_REFACTORED_CODE,
 } from "@/lib/refactor";
+import {
+  clientKey,
+  isRateLimited,
+  jsonError,
+  readString,
+  streamCannedText,
+} from "@/lib/apiGuards";
 
 // Refactoring a full file can take longer than a small JSON config.
 export const maxDuration = 60;
+
+// A single pasted component should comfortably fit in these bounds; anything
+// larger is either a mistake or an attempt to run up the OpenAI bill.
+const MAX_CODE_CHARS = 40_000;
+const MAX_GUIDELINES_CHARS = 4_000;
+// Bounds the cost of a single response regardless of what the model decides.
+const MAX_OUTPUT_TOKENS = 4_096;
 
 export async function POST(req: Request) {
   // --- Guard against malformed / non-JSON bodies ---------------------------
@@ -25,12 +39,32 @@ export async function POST(req: Request) {
     return jsonError(400, "Missing or invalid 'code'. Paste a component to refactor.");
   }
 
+  if (code.length > MAX_CODE_CHARS) {
+    return jsonError(
+      413,
+      `'code' is too large (${code.length} chars, max ${MAX_CODE_CHARS}). Paste a single component file.`,
+    );
+  }
+
+  if (guidelines.length > MAX_GUIDELINES_CHARS) {
+    return jsonError(
+      413,
+      `'guidelines' is too large (${guidelines.length} chars, max ${MAX_GUIDELINES_CHARS}).`,
+    );
+  }
+
   // --- Demo safety net -----------------------------------------------------
   // Stream the exact pre-verified refactor, chunked, so the agent still *looks*
   // like it is rewriting the file live while remaining 100% deterministic.
-  // Checked before the API-key guard so the demo runs with no key at all.
+  // Checked before the API-key guard so the demo runs with no key at all, and
+  // before the rate limiter so an on-stage demo can never be throttled.
   if (process.env.DEMO_MODE === "true") {
-    return streamCannedCode(DEMO_REFACTORED_CODE);
+    return streamCannedText(DEMO_REFACTORED_CODE);
+  }
+
+  // --- Rate limit the paid path ---------------------------------------------
+  if (isRateLimited(clientKey(req))) {
+    return jsonError(429, "Too many refactor requests. Wait a minute and try again.");
   }
 
   // --- Pre-flight API key check --------------------------------------------
@@ -48,46 +82,9 @@ export async function POST(req: Request) {
     system: REFACTOR_SYSTEM_PROMPT,
     prompt: buildRefactorPrompt(code, guidelines),
     temperature: 0.2,
+    maxTokens: MAX_OUTPUT_TOKENS,
   });
 
   // Plain text stream of the refactored source, read directly by the client.
   return result.toTextStreamResponse();
-}
-
-function readString(body: unknown, key: string): string | undefined {
-  if (body && typeof body === "object" && key in body) {
-    const value = (body as Record<string, unknown>)[key];
-    return typeof value === "string" ? value : undefined;
-  }
-  return undefined;
-}
-
-function jsonError(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function streamCannedCode(source: string): Response {
-  const encoder = new TextEncoder();
-  const chunkSize = 4;
-
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      for (let i = 0; i < source.length; i += chunkSize) {
-        controller.enqueue(encoder.encode(source.slice(i, i + chunkSize)));
-        // Pacing so the "typing" animation reads well during the demo.
-        await new Promise((r) => setTimeout(r, 12));
-      }
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
-  });
 }
