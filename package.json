@@ -1,6 +1,18 @@
 {
+  "name": "dynamic-ui-morphing-framework",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Behaviour Agent: privacy-first numeric telemetry engine that drives real-time UI morphing",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "typescript": "^6.0.3",
     "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   }
 }
