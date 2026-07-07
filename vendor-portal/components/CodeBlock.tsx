@@ -6,9 +6,9 @@ import { Highlight, themes } from "prism-react-renderer";
  * Syntax-highlighted, line-numbered code view. Re-tokenizes on each streamed
  * chunk — fine for a single component file and gives the live "typing" feel.
  */
-export function CodeBlock({ code }: { code: string }) {
+export function CodeBlock({ code, language = "tsx" }: { code: string; language?: "tsx" | "json" }) {
   return (
-    <Highlight code={code} language="tsx" theme={themes.vsDark}>
+    <Highlight code={code} language={language} theme={themes.vsDark}>
       {({ className, style, tokens, getLineProps, getTokenProps }) => (
         <pre
           className={`${className} font-mono text-[13px] leading-relaxed`}

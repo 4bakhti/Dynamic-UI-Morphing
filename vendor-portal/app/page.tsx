@@ -10,12 +10,55 @@ import {
   Code2,
   Terminal,
   RotateCcw,
+  FileJson2,
 } from "lucide-react";
 import { CodeBlock } from "@/components/CodeBlock";
 import { DEMO_SOURCE_CODE, DEMO_GUIDELINES } from "@/lib/refactor";
+import { DEMO_APP_DESCRIPTION } from "@/lib/schema";
+
+type AgentMode = "refactor" | "layout";
+
+const MODE_COPY: Record<
+  AgentMode,
+  {
+    tab: string;
+    inputTitle: string;
+    inputSubtitle: string;
+    inputPlaceholder: string;
+    action: string;
+    outputFile: string;
+    outputLanguage: "tsx" | "json";
+    emptyHint: string;
+  }
+> = {
+  refactor: {
+    tab: "Refactor Code",
+    inputTitle: "Source Component",
+    inputSubtitle: "Paste a raw React / TypeScript file",
+    inputPlaceholder: "Paste your component source here…",
+    action: "Refactor Component",
+    outputFile: "Dashboard.tsx · refactored",
+    outputLanguage: "tsx",
+    emptyHint:
+      "Paste a component and hit Refactor — the agent injects state listeners, conditional Tailwind, and visibility gates for the three modes.",
+  },
+  layout: {
+    tab: "Layout JSON",
+    inputTitle: "App Description",
+    inputSubtitle: "Describe your app's components in plain text",
+    inputPlaceholder: "Describe your dashboard's components and their priorities…",
+    action: "Generate Layout",
+    outputFile: "layout-config.json · generated",
+    outputLanguage: "json",
+    emptyHint:
+      "Describe your app and hit Generate — the agent emits a schema-validated JSON config you can import straight into the Live Demo App (header → Import layout).",
+  },
+};
 
 export default function VendorPortalPage() {
+  const [agentMode, setAgentMode] = useState<AgentMode>("refactor");
   const [code, setCode] = useState(DEMO_SOURCE_CODE);
+  const [description, setDescription] = useState(DEMO_APP_DESCRIPTION);
   const [guidelines, setGuidelines] = useState(DEMO_GUIDELINES);
   const [output, setOutput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -25,13 +68,26 @@ export default function VendorPortalPage() {
   const abortRef = useRef<AbortController | null>(null);
   const outputRef = useRef<HTMLDivElement>(null);
 
+  const copy = MODE_COPY[agentMode];
+  const input = agentMode === "refactor" ? code : description;
+  const setInput = agentMode === "refactor" ? setCode : setDescription;
+
   // Keep the output pane scrolled to the newest streamed line.
   useEffect(() => {
     const el = outputRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [output]);
 
-  const handleRefactor = async () => {
+  const switchMode = (mode: AgentMode) => {
+    if (mode === agentMode) return;
+    abortRef.current?.abort();
+    setAgentMode(mode);
+    setOutput("");
+    setError(null);
+    setCopied(false);
+  };
+
+  const handleGenerate = async () => {
     setError(null);
     setCopied(false);
     setOutput("");
@@ -40,11 +96,15 @@ export default function VendorPortalPage() {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const endpoint = agentMode === "refactor" ? "/api/refactor-ui" : "/api/generate-layout";
+    const payload =
+      agentMode === "refactor" ? { code, guidelines } : { description, guidelines };
+
     try {
-      const res = await fetch("/api/refactor-ui", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, guidelines }),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
 
@@ -65,7 +125,7 @@ export default function VendorPortalPage() {
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
-        setError((e as Error).message || "Refactor failed.");
+        setError((e as Error).message || "Generation failed.");
       }
     } finally {
       setIsLoading(false);
@@ -84,6 +144,7 @@ export default function VendorPortalPage() {
 
   const resetDemo = () => {
     setCode(DEMO_SOURCE_CODE);
+    setDescription(DEMO_APP_DESCRIPTION);
     setGuidelines(DEMO_GUIDELINES);
   };
 
@@ -91,21 +152,41 @@ export default function VendorPortalPage() {
     <main className="mx-auto flex min-h-screen max-w-[1600px] flex-col px-6 py-6">
       <Header />
 
-      <div className="mt-6 grid flex-1 grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="mt-6 flex items-center gap-2">
+        <ModeTab
+          icon={<Code2 className="h-4 w-4" />}
+          label={MODE_COPY.refactor.tab}
+          active={agentMode === "refactor"}
+          onClick={() => switchMode("refactor")}
+        />
+        <ModeTab
+          icon={<FileJson2 className="h-4 w-4" />}
+          label={MODE_COPY.layout.tab}
+          active={agentMode === "layout"}
+          onClick={() => switchMode("layout")}
+        />
+        <span className="ml-2 text-xs text-slate-500">
+          {agentMode === "refactor"
+            ? "Rewrites your component source with mode-aware rendering"
+            : "Emits schema-validated layout JSON the Live Demo App imports directly"}
+        </span>
+      </div>
+
+      <div className="mt-4 grid flex-1 grid-cols-1 gap-5 lg:grid-cols-2">
         {/* ---------- LEFT: inputs ---------- */}
         <section className="flex flex-col overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-900/60 backdrop-blur">
           <PaneHeader
             icon={<Code2 className="h-4 w-4 text-accent" />}
-            title="Source Component"
-            subtitle="Paste a raw React / TypeScript file"
+            title={copy.inputTitle}
+            subtitle={copy.inputSubtitle}
           />
 
           <div className="flex min-h-0 flex-1 flex-col gap-4 p-4">
             <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               spellCheck={false}
-              placeholder="Paste your component source here…"
+              placeholder={copy.inputPlaceholder}
               className="min-h-[16rem] flex-1 resize-none rounded-xl border border-ink-700 bg-ink-950/80 p-4 font-mono text-[13px] leading-relaxed text-slate-200 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
             />
 
@@ -128,8 +209,8 @@ export default function VendorPortalPage() {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={isLoading ? handleStop : handleRefactor}
-                disabled={!code.trim()}
+                onClick={isLoading ? handleStop : handleGenerate}
+                disabled={!input.trim()}
                 className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-ink-950 transition hover:bg-accent-glow disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isLoading ? (
@@ -140,7 +221,7 @@ export default function VendorPortalPage() {
                 ) : (
                   <>
                     <Wand2 className="h-4 w-4" />
-                    Refactor Component
+                    {copy.action}
                   </>
                 )}
               </button>
@@ -161,7 +242,7 @@ export default function VendorPortalPage() {
           </div>
         </section>
 
-        {/* ---------- RIGHT: refactored output ---------- */}
+        {/* ---------- RIGHT: generated output ---------- */}
         <section className="flex flex-col overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-950/80 shadow-2xl shadow-black/40">
           <div className="flex items-center justify-between border-b border-ink-700/70 bg-ink-900/80 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -170,7 +251,7 @@ export default function VendorPortalPage() {
               <span className="h-3 w-3 rounded-full bg-emerald-400/80" />
               <span className="ml-3 inline-flex items-center gap-1.5 font-mono text-xs text-slate-500">
                 <FileCode2 className="h-3.5 w-3.5" />
-                Dashboard.tsx · refactored
+                {copy.outputFile}
               </span>
             </div>
             <button
@@ -196,15 +277,23 @@ export default function VendorPortalPage() {
           >
             {output ? (
               <div className="animate-fade-in">
-                <CodeBlock code={output} />
+                <CodeBlock code={output} language={copy.outputLanguage} />
                 {isLoading && (
                   <span className="ml-0.5 inline-block h-4 w-2 animate-blink bg-accent align-middle" />
                 )}
               </div>
             ) : (
-              <EmptyState loading={isLoading} />
+              <EmptyState loading={isLoading} hint={copy.emptyHint} />
             )}
           </div>
+
+          {agentMode === "layout" && output && !isLoading && (
+            <p className="border-t border-ink-700/70 bg-ink-900/40 px-4 py-2.5 text-xs text-slate-500">
+              Copy this JSON, then in the Live Demo App open the header&apos;s{" "}
+              <span className="text-slate-300">Import layout</span> panel and paste it —
+              the dashboard morphs using your config.
+            </p>
+          )}
         </section>
       </div>
     </main>
@@ -220,10 +309,10 @@ function Header() {
         </div>
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-white">
-            Adaptive UI · Code Refactoring Engine
+            Adaptive UI · Developing Agent
           </h1>
           <p className="text-sm text-slate-400">
-            The Developing Agent rewrites your components for cognitive-state morphing
+            Refactors your components — or emits layout JSON — for cognitive-state morphing
           </p>
         </div>
       </div>
@@ -232,6 +321,32 @@ function Header() {
         Developing Agent online
       </span>
     </header>
+  );
+}
+
+function ModeTab({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition ${
+        active
+          ? "border-accent/60 bg-accent/10 text-accent"
+          : "border-ink-700 text-slate-400 hover:text-slate-200"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
@@ -253,18 +368,13 @@ function PaneHeader({
   );
 }
 
-function EmptyState({ loading }: { loading: boolean }) {
+function EmptyState({ loading, hint }: { loading: boolean; hint: string }) {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
       <pre className="font-mono text-sm text-slate-600">
-        {loading ? "▌ analyzing component…" : "// refactored component will stream here"}
+        {loading ? "▌ analyzing input…" : "// generated output will stream here"}
       </pre>
-      {!loading && (
-        <p className="mt-2 max-w-xs text-xs text-slate-600">
-          Paste a component and hit Refactor — the agent injects state listeners,
-          conditional Tailwind, and visibility gates for the three modes.
-        </p>
-      )}
+      {!loading && <p className="mt-2 max-w-xs text-xs text-slate-600">{hint}</p>}
     </div>
   );
 }
