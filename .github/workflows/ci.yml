@@ -17,6 +17,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm test
 
@@ -35,6 +36,8 @@ jobs:
       - run: npm ci
       - run: npm ci
         working-directory: demo-app
+      - run: npm audit --audit-level=high
+        working-directory: demo-app
       - run: npx tsc --noEmit
         working-directory: demo-app
 
@@ -49,6 +52,8 @@ jobs:
           cache: npm
           cache-dependency-path: vendor-portal/package-lock.json
       - run: npm ci
+        working-directory: vendor-portal
+      - run: npm audit --audit-level=high
         working-directory: vendor-portal
       - run: npx tsc --noEmit
         working-directory: vendor-portal

@@ -1,0 +1,34 @@
+version: 2
+updates:
+  # Behaviour Agent (repository root)
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      root-dependencies:
+        patterns: ["*"]
+
+  # Live Demo App
+  - package-ecosystem: npm
+    directory: "/demo-app"
+    schedule:
+      interval: weekly
+    groups:
+      demo-app-dependencies:
+        patterns: ["*"]
+
+  # Vendor Portal (Developing Agent)
+  - package-ecosystem: npm
+    directory: "/vendor-portal"
+    schedule:
+      interval: weekly
+    groups:
+      vendor-portal-dependencies:
+        patterns: ["*"]
+
+  # Keep the CI workflow's actions current too
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
