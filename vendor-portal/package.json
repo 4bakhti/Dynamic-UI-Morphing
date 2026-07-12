@@ -9,23 +9,23 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.84",
-    "ai": "^6.0.224",
-    "lucide-react": "^1.21.0",
-    "next": "^15.5.20",
+    "@ai-sdk/openai": "^4.0.11",
+    "ai": "^7.0.22",
+    "lucide-react": "^1.24.0",
+    "next": "^16.2.10",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^20.16.0",
+    "@types/node": "^26.1.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.5.10",
-    "tailwindcss": "^3.4.14",
-    "typescript": "^5.6.3"
+    "autoprefixer": "^10.5.2",
+    "postcss": "^8.5.17",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "postcss": "$postcss"
