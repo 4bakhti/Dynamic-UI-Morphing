@@ -65,7 +65,9 @@ Both routes are hardened against abuse and prompt injection
 
 - Malformed/non-JSON body → `400`; missing required field → `400`
 - Oversized input (code 40k chars, description 8k, guidelines 4k) → `413`
-- Per-IP sliding-window rate limit on the paid LLM path → `429`
+- Per-IP sliding-window rate limit on the paid LLM path → `429`, backed by a
+  global all-clients budget so rotating spoofed `x-forwarded-for` values cannot
+  mint fresh per-IP allowances
 - Output capped at 4,096 tokens per refactor response
 - Pasted code/descriptions are wrapped in untrusted-data delimiters, and the
   system prompt is instructed to ignore embedded instructions

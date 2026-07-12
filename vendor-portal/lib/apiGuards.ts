@@ -14,8 +14,23 @@
  */
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 6;
+/**
+ * Backstop across ALL clients combined. The per-IP key comes from
+ * x-forwarded-for, which anyone who can reach the origin directly (any
+ * deployment not fronted by a trusted proxy) can rotate per request to mint a
+ * fresh per-IP budget. A global budget bounds total LLM spend — and the size
+ * of requestLog — no matter how many IPs the traffic claims to come from.
+ */
+const GLOBAL_RATE_LIMIT_MAX_REQUESTS = 30;
+const globalLog: number[] = [];
 const requestLog = new Map<string, number[]>();
 
+/**
+ * Uses the leftmost x-forwarded-for entry, which is the real client IP on
+ * platforms that overwrite the header (e.g. Vercel) but is client-controlled
+ * when the origin is reachable directly — the global budget in isRateLimited
+ * is what actually bounds spend in that case.
+ */
 export function clientKey(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
   return forwarded?.split(",")[0]?.trim() || "unknown";
@@ -24,6 +39,15 @@ export function clientKey(req: Request): string {
 export function isRateLimited(key: string): boolean {
   const now = Date.now();
   const cutoff = now - RATE_LIMIT_WINDOW_MS;
+
+  // Global budget first: while it is exhausted nothing below records state,
+  // so rotating spoofed IPs can neither bypass the limit nor grow the map.
+  while (globalLog.length > 0 && globalLog[0] <= cutoff) {
+    globalLog.shift();
+  }
+  if (globalLog.length >= GLOBAL_RATE_LIMIT_MAX_REQUESTS) {
+    return true;
+  }
 
   // Keep the map from growing unbounded under many distinct IPs.
   if (requestLog.size > 1_000) {
@@ -42,6 +66,7 @@ export function isRateLimited(key: string): boolean {
 
   recent.push(now);
   requestLog.set(key, recent);
+  globalLog.push(now);
   return false;
 }
 
