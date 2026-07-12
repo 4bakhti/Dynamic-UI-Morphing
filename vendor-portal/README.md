@@ -72,3 +72,22 @@ Both routes are hardened against abuse and prompt injection
 - Pasted code/descriptions are wrapped in untrusted-data delimiters, and the
   system prompt is instructed to ignore embedded instructions
 - Live mode with no `OPENAI_API_KEY` → `500` with a clear setup message
+
+### Optional public-deployment hardening
+
+Both are off by default so the local demo stays open; enable them via
+`.env.local` before exposing the portal on a public URL:
+
+- **`PORTAL_ACCESS_CODE`** — when set, every live request must send a matching
+  `x-portal-access-code` header or it gets a `401`. The portal UI has an
+  **Access code** field (persisted in `localStorage`) that sends it; the compare
+  is constant-time. Unset ⇒ the gate is a no-op.
+- **`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`** — when both are set,
+  the per-IP + global rate limit is enforced in Upstash Redis so the budget
+  holds across serverless instances. Unset ⇒ the in-memory per-instance limiter
+  is used.
+
+> **Accepted risk (by design):** `DEMO_MODE=true` responses are intentionally
+> **not** rate-limited (so an on-stage demo can never be throttled), and each
+> streamed response holds a connection for ~25 s. Fine for a hackathon; revisit
+> if the portal stays deployed with demo mode on.

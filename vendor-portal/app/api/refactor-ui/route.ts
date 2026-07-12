@@ -6,6 +6,7 @@ import {
   DEMO_REFACTORED_CODE,
 } from "@/lib/refactor";
 import {
+  accessCodeGate,
   clientKey,
   isRateLimited,
   jsonError,
@@ -62,8 +63,14 @@ export async function POST(req: Request) {
     return streamCannedText(DEMO_REFACTORED_CODE);
   }
 
+  // --- Access-code gate (no-op unless PORTAL_ACCESS_CODE is set) ------------
+  const gated = accessCodeGate(req);
+  if (gated) {
+    return gated;
+  }
+
   // --- Rate limit the paid path ---------------------------------------------
-  if (isRateLimited(clientKey(req))) {
+  if (await isRateLimited(clientKey(req))) {
     return jsonError(429, "Too many refactor requests. Wait a minute and try again.");
   }
 

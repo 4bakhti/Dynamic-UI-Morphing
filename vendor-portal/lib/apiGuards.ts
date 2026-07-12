@@ -2,15 +2,17 @@
  * Shared request guards for the Developing Agent API routes.
  *
  * Both routes proxy to a paid LLM, so they share one rate-limit budget and the
- * same body-reading and error helpers.
+ * same body-reading, access-gate, and error helpers.
  */
+import { createHash, timingSafeEqual } from "node:crypto";
 
 /**
- * Sliding-window limiter on LLM calls, keyed by client IP. In-memory, so it is
- * per-server-instance (a determined attacker on a multi-instance deployment
- * gets N× the budget) — good enough to stop casual abuse of an open endpoint
- * that spends real API credits. Swap for a shared store (e.g. Upstash) if this
- * ever runs beyond a demo.
+ * Sliding-window limiter on LLM calls, keyed by client IP. The in-memory path
+ * is per-server-instance (on a multi-instance deployment each instance gets its
+ * own budget) — good enough to stop casual abuse of an open endpoint that
+ * spends real API credits. When UPSTASH_REDIS_REST_URL/_TOKEN are set,
+ * isRateLimited transparently switches to a shared Upstash store so the budget
+ * holds across every instance.
  */
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 6;
@@ -36,7 +38,27 @@ export function clientKey(req: Request): string {
   return forwarded?.split(",")[0]?.trim() || "unknown";
 }
 
-export function isRateLimited(key: string): boolean {
+/**
+ * True when the request should be rejected with a 429. Uses the shared Upstash
+ * store when configured (budget holds across instances), otherwise the
+ * in-memory limiter. Async because the Upstash calls are network round-trips.
+ */
+export async function isRateLimited(key: string): Promise<boolean> {
+  const upstash = await getUpstashLimiters();
+  if (upstash) {
+    // Global budget first so a single hot IP can't exhaust it on its own path.
+    const globalResult = await upstash.global.limit("all");
+    if (!globalResult.success) {
+      return true;
+    }
+    const ipResult = await upstash.perIp.limit(key);
+    return !ipResult.success;
+  }
+
+  return isRateLimitedInMemory(key);
+}
+
+function isRateLimitedInMemory(key: string): boolean {
   const now = Date.now();
   const cutoff = now - RATE_LIMIT_WINDOW_MS;
 
@@ -68,6 +90,85 @@ export function isRateLimited(key: string): boolean {
   requestLog.set(key, recent);
   globalLog.push(now);
   return false;
+}
+
+interface UpstashLimiter {
+  limit: (key: string) => Promise<{ success: boolean }>;
+}
+
+let upstashLimitersPromise: Promise<{ perIp: UpstashLimiter; global: UpstashLimiter } | null> | null =
+  null;
+
+/**
+ * Builds the per-IP and global Upstash limiters once, when the REST env vars
+ * are present. Returns null (so callers fall back to the in-memory limiter)
+ * when Upstash is not configured or its packages fail to load.
+ */
+async function getUpstashLimiters(): Promise<
+  { perIp: UpstashLimiter; global: UpstashLimiter } | null
+> {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return null;
+  }
+
+  if (!upstashLimitersPromise) {
+    upstashLimitersPromise = (async () => {
+      try {
+        const [{ Ratelimit }, { Redis }] = await Promise.all([
+          import("@upstash/ratelimit"),
+          import("@upstash/redis"),
+        ]);
+        const redis = Redis.fromEnv();
+        return {
+          perIp: new Ratelimit({
+            redis,
+            limiter: Ratelimit.slidingWindow(RATE_LIMIT_MAX_REQUESTS, "60 s"),
+            prefix: "llm:ip",
+          }),
+          global: new Ratelimit({
+            redis,
+            limiter: Ratelimit.slidingWindow(GLOBAL_RATE_LIMIT_MAX_REQUESTS, "60 s"),
+            prefix: "llm:global",
+          }),
+        };
+      } catch {
+        // Package missing or misconfigured — degrade to the in-memory limiter.
+        return null;
+      }
+    })();
+  }
+
+  return upstashLimitersPromise;
+}
+
+/**
+ * Optional shared-secret gate for the paid LLM path. When PORTAL_ACCESS_CODE is
+ * set, every live request must send a matching `x-portal-access-code` header;
+ * when it is unset the gate is disabled so the open demo keeps working. Returns
+ * a 401 Response to short-circuit on failure, or null to allow the request.
+ */
+export function accessCodeGate(req: Request): Response | null {
+  const expected = process.env.PORTAL_ACCESS_CODE;
+  if (!expected) {
+    return null; // Gate disabled — behaves exactly like the open demo.
+  }
+
+  const provided = req.headers.get("x-portal-access-code") ?? "";
+  if (!safeEqual(provided, expected)) {
+    return jsonError(401, "Invalid or missing access code.");
+  }
+  return null;
+}
+
+/**
+ * Constant-time string comparison. Hashing both sides to a fixed 32-byte digest
+ * first means timingSafeEqual never throws on length mismatch and the compare
+ * leaks neither the code nor its length.
+ */
+function safeEqual(a: string, b: string): boolean {
+  const ah = createHash("sha256").update(a).digest();
+  const bh = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ah, bh);
 }
 
 export function readString(body: unknown, key: string): string | undefined {

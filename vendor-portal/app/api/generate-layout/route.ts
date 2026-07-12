@@ -7,6 +7,7 @@ import {
   DEMO_OUTPUT,
 } from "@/lib/schema";
 import {
+  accessCodeGate,
   clientKey,
   isRateLimited,
   jsonError,
@@ -59,8 +60,14 @@ export async function POST(req: Request) {
     return streamCannedText(JSON.stringify(DEMO_OUTPUT, null, 2));
   }
 
+  // --- Access-code gate (no-op unless PORTAL_ACCESS_CODE is set) ------------
+  const gated = accessCodeGate(req);
+  if (gated) {
+    return gated;
+  }
+
   // --- Rate limit the paid path ---------------------------------------------
-  if (isRateLimited(clientKey(req))) {
+  if (await isRateLimited(clientKey(req))) {
     return jsonError(429, "Too many generation requests. Wait a minute and try again.");
   }
 

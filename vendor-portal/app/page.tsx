@@ -11,6 +11,7 @@ import {
   Terminal,
   RotateCcw,
   FileJson2,
+  KeyRound,
 } from "lucide-react";
 import { CodeBlock } from "@/components/CodeBlock";
 import { DEMO_SOURCE_CODE, DEMO_GUIDELINES } from "@/lib/refactor";
@@ -60,10 +61,23 @@ export default function VendorPortalPage() {
   const [code, setCode] = useState(DEMO_SOURCE_CODE);
   const [description, setDescription] = useState(DEMO_APP_DESCRIPTION);
   const [guidelines, setGuidelines] = useState(DEMO_GUIDELINES);
+  const [accessCode, setAccessCode] = useState("");
   const [output, setOutput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Only needed when the server sets PORTAL_ACCESS_CODE; persisted so an
+  // authorized operator types it once. Hydrated post-mount to avoid an SSR
+  // mismatch, since localStorage is not available on the server.
+  useEffect(() => {
+    const saved = localStorage.getItem("vendor-portal:access-code");
+    if (saved) setAccessCode(saved);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("vendor-portal:access-code", accessCode);
+  }, [accessCode]);
 
   const abortRef = useRef<AbortController | null>(null);
   const outputRef = useRef<HTMLDivElement>(null);
@@ -100,10 +114,15 @@ export default function VendorPortalPage() {
     const payload =
       agentMode === "refactor" ? { code, guidelines } : { description, guidelines };
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    // Only sent when the operator has entered a code; the endpoint ignores it
+    // unless PORTAL_ACCESS_CODE is configured server-side.
+    if (accessCode.trim()) headers["x-portal-access-code"] = accessCode.trim();
+
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
@@ -204,6 +223,25 @@ export default function VendorPortalPage() {
                 spellCheck={false}
                 placeholder="e.g. Keep the editor primary; charts are lowest priority…"
                 className="h-24 w-full resize-none rounded-xl border border-ink-700 bg-ink-950/80 p-3 text-sm text-slate-200 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <KeyRound className="h-3.5 w-3.5" />
+                Access Code
+                <span className="font-normal normal-case tracking-normal text-slate-600">
+                  (only if the portal requires one)
+                </span>
+              </label>
+              <input
+                type="password"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+                spellCheck={false}
+                autoComplete="off"
+                placeholder="Leave blank for the open demo"
+                className="w-full rounded-xl border border-ink-700 bg-ink-950/80 p-3 text-sm text-slate-200 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
               />
             </div>
 
