@@ -13,6 +13,27 @@ export interface IgnoredAttempt {
   at: number;
 }
 
+/** localStorage key holding the raw imported-layout JSON across refreshes. */
+const LAYOUT_STORAGE_KEY = "demo-app:imported-layout";
+
+function persistLayoutJson(json: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, json);
+  } catch {
+    // Private-mode / quota errors are non-fatal — the in-memory config still works.
+  }
+}
+
+function clearPersistedLayout(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(LAYOUT_STORAGE_KEY);
+  } catch {
+    // Ignore — nothing to clean up if storage is unavailable.
+  }
+}
+
 export interface DashboardState {
   currentMode: DashboardMode;
   isInterfaceLocked: boolean;
@@ -25,6 +46,8 @@ export interface DashboardState {
   clearIgnoredAttempt: () => void;
   importLayoutConfig: (json: string) => void;
   resetLayoutConfig: () => void;
+  /** Re-applies a layout persisted from a previous session. Call once on mount. */
+  hydrateLayoutConfig: () => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
@@ -56,10 +79,32 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       const parsed = JSON.parse(json);
       const config = parseImportedLayoutConfig(parsed);
       set({ importedLayoutConfig: config, layoutImportError: null });
+      persistLayoutJson(json);
     } catch (error) {
       set({ layoutImportError: error instanceof Error ? error.message : "Invalid JSON." });
     }
   },
 
-  resetLayoutConfig: () => set({ importedLayoutConfig: null, layoutImportError: null }),
+  resetLayoutConfig: () => {
+    clearPersistedLayout();
+    set({ importedLayoutConfig: null, layoutImportError: null });
+  },
+
+  hydrateLayoutConfig: () => {
+    if (typeof window === "undefined" || get().importedLayoutConfig) return;
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+    } catch {
+      return;
+    }
+    if (!stored) return;
+    try {
+      const config = parseImportedLayoutConfig(JSON.parse(stored));
+      set({ importedLayoutConfig: config, layoutImportError: null });
+    } catch {
+      // Stored value is stale/invalid (e.g. schema changed) — drop it.
+      clearPersistedLayout();
+    }
+  },
 }));

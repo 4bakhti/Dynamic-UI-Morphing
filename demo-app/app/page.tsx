@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Minimize2 } from "lucide-react";
 import { useDashboardStore } from "@/lib/store";
@@ -24,7 +24,14 @@ export default function DashboardPage() {
   const currentMode = useDashboardStore((state) => state.currentMode);
   const importedLayoutConfig = useDashboardStore((state) => state.importedLayoutConfig);
   const setMode = useDashboardStore((state) => state.setMode);
+  const hydrateLayoutConfig = useDashboardStore((state) => state.hydrateLayoutConfig);
   const liveSignal = useBehaviourBridge();
+
+  // Re-apply a layout imported in a previous session. Runs after mount so it
+  // never causes an SSR/hydration mismatch (localStorage is client-only).
+  useEffect(() => {
+    hydrateLayoutConfig();
+  }, [hydrateLayoutConfig]);
 
   const activeConfig = importedLayoutConfig ?? LAYOUT_CONFIG;
 

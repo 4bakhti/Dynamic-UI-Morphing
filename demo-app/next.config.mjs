@@ -20,11 +20,8 @@ const contentSecurityPolicy = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Hackathon deployment safety net: do not block the production bundle on
-  // type-checking or lint findings. Runtime/module errors still fail normally.
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // Types are clean and enforced in CI, so let a type error fail the build
+  // rather than ship silently. Lint is still not a release blocker.
   eslint: {
     ignoreDuringBuilds: true,
   },

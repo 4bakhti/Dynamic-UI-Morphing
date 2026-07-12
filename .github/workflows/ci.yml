@@ -55,5 +55,7 @@ jobs:
         working-directory: vendor-portal
       - run: npm audit --audit-level=high
         working-directory: vendor-portal
+      - run: npm test
+        working-directory: vendor-portal
       - run: npx tsc --noEmit
         working-directory: vendor-portal
