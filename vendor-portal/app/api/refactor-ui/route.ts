@@ -82,7 +82,7 @@ export async function POST(req: Request) {
     system: REFACTOR_SYSTEM_PROMPT,
     prompt: buildRefactorPrompt(code, guidelines),
     temperature: 0.2,
-    maxTokens: MAX_OUTPUT_TOKENS,
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
   });
 
   // Plain text stream of the refactored source, read directly by the client.
