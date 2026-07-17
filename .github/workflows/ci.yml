@@ -22,7 +22,7 @@ jobs:
       - run: npm test
 
   demo-app:
-    name: Demo App · typecheck
+    name: Demo App · typecheck + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -40,9 +40,13 @@ jobs:
         working-directory: demo-app
       - run: npx tsc --noEmit
         working-directory: demo-app
+      # Typechecking alone green-lit PRs that didn't build (e.g. Tailwind 4
+      # config breakage) — the production build is the real gate.
+      - run: npm run build
+        working-directory: demo-app
 
   vendor-portal:
-    name: Vendor Portal · typecheck
+    name: Vendor Portal · typecheck + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -58,4 +62,6 @@ jobs:
       - run: npm test
         working-directory: vendor-portal
       - run: npx tsc --noEmit
+        working-directory: vendor-portal
+      - run: npm run build
         working-directory: vendor-portal
