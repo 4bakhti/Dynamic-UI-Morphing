@@ -10,9 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.84",
-    "ai": "^6.0.224",
-    "lucide-react": "^1.21.0",
+    "@ai-sdk/openai": "^3.0.85",
+    "ai": "^6.0.229",
+    "lucide-react": "^1.24.0",
     "next": "^15.5.20",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.0.0",
@@ -27,8 +27,8 @@
     "@types/node": "^20.16.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.5.10",
+    "autoprefixer": "^10.5.4",
+    "postcss": "^8.5.19",
     "tailwindcss": "^3.4.14",
     "typescript": "^5.6.3",
     "vitest": "^3.0.0"
