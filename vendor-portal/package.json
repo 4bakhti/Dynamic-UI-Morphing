@@ -13,7 +13,7 @@
     "@ai-sdk/openai": "^3.0.84",
     "ai": "^6.0.224",
     "lucide-react": "^1.21.0",
-    "next": "^15.5.20",
+    "next": "^15.5.21",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
