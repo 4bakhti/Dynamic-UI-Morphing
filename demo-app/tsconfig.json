@@ -15,7 +15,13 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      // ../src/behaviour is compiled as part of this app but lives outside it,
+      // so TypeScript resolves its "zustand" import from the repository root,
+      // where Vercel installs nothing. Point it at demo-app's own copy, exactly
+      // as the webpack alias in next.config.mjs does for the bundler.
+      "zustand": ["./node_modules/zustand"],
+      "zustand/*": ["./node_modules/zustand/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
