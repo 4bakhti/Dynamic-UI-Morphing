@@ -20,7 +20,7 @@ export const COMPONENT_NAMES = [
 const componentName = z.enum(COMPONENT_NAMES);
 
 // An explicit optional-key object instead of z.record so the generated JSON
-// schema stays friendly to OpenAI structured outputs.
+// schema stays friendly to Gemini and OpenAI structured outputs.
 const cssOverridesSchema = z.object({
   SidebarNavigation: z.string().optional(),
   TopMetricsRibbon: z.string().optional(),

@@ -3,7 +3,8 @@ import path from "node:path";
 // Basic default-src 'self' CSP as an XSS backstop. Next's App Router injects
 // inline hydration scripts and framer-motion writes inline style attributes, so
 // scripts/styles need 'unsafe-inline'; dev additionally needs 'unsafe-eval' for
-// React Refresh. All data the app talks to is same-origin (connect-src 'self').
+// React Refresh. All data the app talks to is same-origin (connect-src 'self'):
+// Gemini, ElevenLabs and Solana are only ever called server-side from /api/*.
 const isDev = process.env.NODE_ENV === "development";
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -11,6 +12,8 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
+  // ElevenLabs speech is fetched by our own /api/voice route and played from a blob: URL.
+  "media-src 'self' blob:",
   "connect-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",

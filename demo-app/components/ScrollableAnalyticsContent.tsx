@@ -20,7 +20,7 @@ export function ScrollableAnalyticsContent({ dimmed }: { dimmed: boolean }) {
       className={cn("space-y-6 transition-opacity duration-300", dimmed && "opacity-30")}
     >
       <div className="grid gap-6 xl:grid-cols-2">
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="card p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Forecast</p>
@@ -34,7 +34,7 @@ export function ScrollableAnalyticsContent({ dimmed }: { dimmed: boolean }) {
             {BAR_HEIGHTS.map((height, index) => (
               <div key={index} className="flex flex-1 flex-col items-center justify-end gap-2">
                 <div
-                  className="w-full rounded-t bg-indigo-400/80 transition-colors hover:bg-indigo-500"
+                  className="w-full rounded-t bg-gradient-to-t from-indigo-500 to-violet-400 transition-opacity hover:opacity-80"
                   style={{ height: `${height}%` }}
                   title={`Month ${index + 1}: ${height} units`}
                 />
@@ -46,7 +46,7 @@ export function ScrollableAnalyticsContent({ dimmed }: { dimmed: boolean }) {
           </div>
         </article>
 
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="card p-5">
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-indigo-500" />
             <h2 className="text-base font-semibold text-slate-900">Data quality monitor</h2>
@@ -62,7 +62,7 @@ export function ScrollableAnalyticsContent({ dimmed }: { dimmed: boolean }) {
                       <span className="text-slate-500">{completeness}% complete</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-indigo-500" style={{ width: `${completeness}%` }} />
+                      <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${completeness}%` }} />
                     </div>
                   </div>
                 );
@@ -72,7 +72,7 @@ export function ScrollableAnalyticsContent({ dimmed }: { dimmed: boolean }) {
         </article>
       </div>
 
-      <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <article className="card overflow-hidden">
         <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4">
           <TableProperties className="h-4 w-4 text-indigo-500" />
           <h2 className="text-base font-semibold text-slate-900">Regional performance detail</h2>
