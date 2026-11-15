@@ -96,7 +96,7 @@ export function ScrollableTabPlaceholder({ tab }: { tab: string }) {
   const Icon = TAB_ICONS[tab as keyof typeof TAB_ICONS] ?? BarChart3;
 
   return (
-    <section className="flex min-h-[200vh] flex-col gap-8 p-8" aria-labelledby="tab-content-title">
+    <section className="flex min-h-[200vh] flex-col gap-8 p-2" aria-labelledby="tab-content-title">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-500">Workspace</p>
         <h2 id="tab-content-title" className="mt-2 flex items-center gap-3 text-3xl font-semibold text-slate-900">
@@ -108,7 +108,7 @@ export function ScrollableTabPlaceholder({ tab }: { tab: string }) {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {data.metrics.map((metric) => (
-          <article key={metric.label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article key={metric.label} className="card p-5">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{metric.label}</p>
             <p className="mt-2 text-2xl font-semibold text-slate-900">{metric.value}</p>
           </article>
@@ -117,7 +117,7 @@ export function ScrollableTabPlaceholder({ tab }: { tab: string }) {
 
       <div className="grid gap-8 xl:grid-cols-2">
         {data.records.map((record) => (
-          <article key={record.title} className="min-h-64 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <article key={record.title} className="card min-h-64 p-6 hover:shadow-card-hover">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="font-semibold text-slate-800">{record.title}</h3>
@@ -129,7 +129,7 @@ export function ScrollableTabPlaceholder({ tab }: { tab: string }) {
             </div>
             <p className="mt-8 text-sm text-slate-500">{record.detail}</p>
             <div className="mt-8 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-indigo-500" style={{ width: `${record.progress}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${record.progress}%` }} />
             </div>
           </article>
         ))}

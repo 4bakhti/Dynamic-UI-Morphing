@@ -1,4 +1,3 @@
-import { openai } from "@ai-sdk/openai";
 import { streamObject } from "ai";
 import {
   layoutSchema,
@@ -14,6 +13,7 @@ import {
   readString,
   streamCannedText,
 } from "@/lib/apiGuards";
+import { missingModelMessage, resolveModel } from "@/lib/model";
 
 export const maxDuration = 30;
 
@@ -72,19 +72,16 @@ export async function POST(req: Request) {
   }
 
   // --- Pre-flight API key check --------------------------------------------
-  if (!process.env.OPENAI_API_KEY) {
-    return jsonError(
-      500,
-      "Server is not configured for live generation: OPENAI_API_KEY is missing. " +
-        "Set the key in .env.local (and restart), or set DEMO_MODE=true.",
-    );
+  const resolved = resolveModel();
+  if ("error" in resolved) {
+    return jsonError(500, missingModelMessage(resolved.error));
   }
 
   // --- Live Developing Agent (layout JSON) ----------------------------------
   // The Zod schema constrains every component name and field, so the model
   // structurally cannot emit a config the demo app fails to parse.
   const result = streamObject({
-    model: openai("gpt-4o-mini"),
+    model: resolved.model,
     schema: layoutSchema,
     system: LAYOUT_SYSTEM_PROMPT,
     prompt: buildLayoutPrompt(description, guidelines),

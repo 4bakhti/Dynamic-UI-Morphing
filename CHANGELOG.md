@@ -1,5 +1,14 @@
 # Changelog
 
+## UniHack 8 Submission (2026-11-15)
+
+- Redesigned the live demo: dark sidebar, glass header with an animated mode switcher and a live composite-score meter, sparkline metric cards, a smooth area chart with hover tooltips, a timeline notification feed, and an ambient backdrop whose colour morphs with the mode.
+- Added the Adaptive Copilot drawer with three sponsor integrations, each with a labelled offline fallback: Google Gemini (nudges, report outlines, mode explanations), ElevenLabs (spoken mode announcements, read-aloud), and a Solana AI Transparency Ledger (SHA-256 of the mode-transition log anchored as an SPL Memo, built without an SDK).
+- The vendor portal's Developing Agent now runs on Google Gemini (`@ai-sdk/google`) by default, with OpenAI as an optional provider.
+- Report text now lives in the store, so it survives switching into and out of Focus mode.
+- Tailwind now scans `lib/`, so layout-config override classes (Exploration dimming, Clarity sizing) are actually generated.
+- Cleared newly published advisories: Next.js 15.5.29, `zod` 4 and `vitest` 4 in the vendor portal, and transitive fixes in all three workspaces. `npm audit` is clean everywhere.
+
 ## Security Hardening (2026-07-12)
 
 - Added a global (all-clients) sliding-window budget to the vendor-portal LLM rate limiter. The per-IP key comes from `x-forwarded-for`, which anyone reaching the origin directly can rotate per request to mint fresh per-IP budgets; the global cap bounds total LLM spend and the limiter's memory regardless of spoofed IPs.

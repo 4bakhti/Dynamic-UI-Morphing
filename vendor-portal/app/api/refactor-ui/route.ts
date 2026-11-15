@@ -1,4 +1,3 @@
-import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import {
   REFACTOR_SYSTEM_PROMPT,
@@ -13,12 +12,13 @@ import {
   readString,
   streamCannedText,
 } from "@/lib/apiGuards";
+import { missingModelMessage, resolveModel } from "@/lib/model";
 
 // Refactoring a full file can take longer than a small JSON config.
 export const maxDuration = 60;
 
 // A single pasted component should comfortably fit in these bounds; anything
-// larger is either a mistake or an attempt to run up the OpenAI bill.
+// larger is either a mistake or an attempt to run up the LLM bill.
 const MAX_CODE_CHARS = 40_000;
 const MAX_GUIDELINES_CHARS = 4_000;
 // Bounds the cost of a single response regardless of what the model decides.
@@ -75,17 +75,14 @@ export async function POST(req: Request) {
   }
 
   // --- Pre-flight API key check --------------------------------------------
-  if (!process.env.OPENAI_API_KEY) {
-    return jsonError(
-      500,
-      "Server is not configured for live generation: OPENAI_API_KEY is missing. " +
-        "Set the key in .env.local (and restart), or set DEMO_MODE=true.",
-    );
+  const resolved = resolveModel();
+  if ("error" in resolved) {
+    return jsonError(500, missingModelMessage(resolved.error));
   }
 
   // --- Live Developing Agent (code refactor) -------------------------------
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: resolved.model,
     system: REFACTOR_SYSTEM_PROMPT,
     prompt: buildRefactorPrompt(code, guidelines),
     temperature: 0.2,

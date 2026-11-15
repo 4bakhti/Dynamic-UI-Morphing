@@ -19,16 +19,16 @@ page:
 
 - **Next.js (App Router)** + React + Tailwind CSS
 - **Lucide React** icons, **prism-react-renderer** for code syntax highlighting
-- **Vercel AI SDK** (`ai`, `@ai-sdk/openai`): `streamText` for code refactoring,
+- **Vercel AI SDK** (`ai`, `@ai-sdk/google`, `@ai-sdk/openai`): `streamText` for code refactoring,
   `streamObject` + **Zod** for schema-validated layout JSON
-- Model: `gpt-4o-mini`
+- Model: Google Gemini `gemini-3.8-flash` by default (`GEMINI_MODEL`); set `LLM_PROVIDER=openai` to use `gpt-4o-mini` instead
 
 ## Setup
 
 ```bash
 cd vendor-portal
 npm install
-# add your key + mode to .env.local (OPENAI_API_KEY, DEMO_MODE)
+# add your key + mode to .env.local (GEMINI_API_KEY, DEMO_MODE)
 npm run dev
 ```
 
@@ -41,7 +41,7 @@ Open http://localhost:3000.
 - `DEMO_MODE=true` — both routes stream **exact** pre-verified output (chunked,
   so it still animates like a live generation). Use this on stage for a
   deterministic, bug-free result. No API key needed.
-- `DEMO_MODE=false` — real live `gpt-4o-mini` calls.
+- `DEMO_MODE=false` — real live Gemini calls.
 
 The refactor prompt, demo source, and canned refactor live in
 [`lib/refactor.ts`](lib/refactor.ts); the layout schema, prompt, and canned
@@ -71,7 +71,7 @@ Both routes are hardened against abuse and prompt injection
 - Output capped at 4,096 tokens per refactor response
 - Pasted code/descriptions are wrapped in untrusted-data delimiters, and the
   system prompt is instructed to ignore embedded instructions
-- Live mode with no `OPENAI_API_KEY` → `500` with a clear setup message
+- Live mode with no `GEMINI_API_KEY` → `500` with a clear setup message
 
 ### Optional public-deployment hardening
 
